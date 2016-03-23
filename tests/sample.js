@@ -10,4 +10,11 @@ describe('A sample test', function() {
       done();
   });
 
+  it('comparing two objects', function(done) {
+      var msgAsString = '{ "moneda" : "euro", "cantidad" : 23 }';
+
+      expect(JSON.parse(msgAsString)).to.deep.equal({cantidad: 23, moneda : "euro"});
+      done();
+  });
+
 });
