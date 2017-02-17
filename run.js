@@ -1,38 +1,77 @@
-var WebSocket = require('ws'),
-    apiToken = "", //Api Token from https://api.slack.com/web (Authentication section)
-    authUrl = "https://slack.com/api/rtm.start?token=" + apiToken,
-    request = require("request"),
-    userId = 'U0375BYGC', // Id for the user the bot is posting as
-    channelId = 'G06E6NZ89'; // Id of the channel the bot is posting to
+require('dotenv').config() // CONFIG ALL THE THINGS
+var defaultTarget = process.env.DEFAULT_TARGET
+var doRequest = require('./utils/doRequest')
+var insertUser = require('./utils/dbUtils').insertUser
+var findUserByName = require('./utils/dbUtils').findUserByName
+var loki = require('lokijs')
+var _ = require('lodash') // I could just use the functions that I need but meh
+var db = new loki('loki.json') // In memory db 4 the winz
+var WebSocket = require('ws')
+var apiToken = process.env.SLACK_API_KEY // Api Token from https://api.slack.com/web (Authentication section)
+var baseUrl = 'https://slack.com/api/'
+var authUrl = baseUrl + 'rtm.start?token=' + apiToken
+var userListUrl = baseUrl + 'users.list?token=' + apiToken
+var userId = '' // Id for the user the bot is posting as
+var channelId = '' // Id of the channel the bot is posting to
+var users = {}
+var processMessage = require('./utils/messageRouter')
 
-request(authUrl, function(err, response, body) {
-  if (!err && response.statusCode === 200) {
-    var res = JSON.parse(body);
-    if (res.ok) {
-      connectWebSocket(res.url);
+
+function setDefaultTarget (member) {
+  var user = users[member]
+  if (user) {
+    users[member] = {
+       id: user.id,
+       bother_me: true
     }
   }
-});
+}
 
-function connectWebSocket(url) {
-  var ws = new WebSocket(url);
+doRequest(userListUrl, function (res) {
+   _.each(res.members, function (member) {
+     insertUser(users, member)
+   })
+   setDefaultTarget(defaultTarget)
+})
 
-  ws.on('open', function() {
-      console.log('Connected');
-  });
+doRequest(authUrl, function (res) {
+  connectWebSocket(res.url)
+})
 
-  ws.on('message', function(message) {
-      console.log('received:', message);
 
-      message = JSON.parse(message);
+
+/*
+(function startRant (defaultTarget) {
+  var user = findUserByName(defaultTarget)
+  console.log('MY TARGET IS:', user)
+})()
+*/
+
+function connectWebSocket (url) {
+  var ws = new WebSocket(url)
+
+  ws.on('open', function () {
+    console.log('Connected')
+  })
+
+  ws.on('message', function (message) {
+    message = JSON.parse(message)
+
+    if (message.type === 'message') {
+      processMessage(message, ws, users)
+    }
+    /*
+      console.log('message chan: ', message.channel)
+      console.log('message user: ', message.user)
 
       if (message.channel === channelId && message.type === 'message' && message.user !== userId) {
           ws.send(JSON.stringify({
-              channel: message.channel, 
-              id: 1, 
-              text: 'Hola viteh', 
+              channel: message.channel,
+              id: 1,
+              text: 'Hola viteh',
               type: "message"
           }));
       }
-  });
+      */
+  })
 }

@@ -4,11 +4,15 @@
   "description": "",
   "main": "test.js",
   "scripts": {
-    "test": "mocha ./tests"
+    "test": "mocha ./tests",
+    "start": "node run"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^4.0.0",
+    "lodash": "^4.17.4",
+    "lokijs": "^1.4.2",
     "request": "^2.57.0",
     "ws": "^0.7.2"
   },
